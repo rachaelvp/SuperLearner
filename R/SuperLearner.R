@@ -27,7 +27,7 @@ SuperLearner <- function(Y, X, newX = NULL, family = gaussian(), SL.library,
     # get defaults for controls and make sure in correct format
     control <- do.call('SuperLearner.control', control)
     cvControl <- do.call('SuperLearner.CV.control', cvControl)
-
+    
     # put together the library
     # should this be in a new environment?
     library <- .createLibrary(SL.library)
@@ -108,13 +108,22 @@ SuperLearner <- function(Y, X, newX = NULL, family = gaussian(), SL.library,
     # create function for the cross-validation step:
     .crossValFUN <- function(valid, Y, dataX, id, obsWeights, library, 
                              kScreen, k, p, libraryNames, saveCVFitLibrary) {
-        tempLearn <- dataX[-valid, , drop = FALSE]
-        tempOutcome <- Y[-valid]
-        tempValid <- dataX[valid, , drop = FALSE]
-        tempWhichScreen <- matrix(NA, nrow = kScreen, ncol = p)
-        tempId <- id[-valid]
-        tempObsWeights <- obsWeights[-valid]
-
+        if(length(valid) == length(Y)){
+            tempLearn <- dataX
+            tempOutcome <- Y
+            tempValid <- dataX
+            tempWhichScreen <- matrix(NA, nrow = kScreen, ncol = p)
+            tempId <- id
+            tempObsWeights <- obsWeights
+        } else {
+            tempLearn <- dataX[-valid, , drop = FALSE]
+            tempOutcome <- Y[-valid]
+            tempValid <- dataX[valid, , drop = FALSE]
+            tempWhichScreen <- matrix(NA, nrow = kScreen, ncol = p)
+            tempId <- id[-valid]
+            tempObsWeights <- obsWeights[-valid]
+        }
+        
         # should this be converted to a lapply also?
         for(s in seq(kScreen)) {
             screen_fn = get(library$screenAlgorithm[s], envir = env)
@@ -162,7 +171,7 @@ SuperLearner <- function(Y, X, newX = NULL, family = gaussian(), SL.library,
     # rbind unlists the output from lapply
     # need to unlist folds to put the rows back in the correct order
     time_train_start = proc.time()
-
+    
     crossValFUN_out <- lapply(validRows, FUN = .crossValFUN, 
                               Y = Y, dataX = X, id = id, 
                               obsWeights = obsWeights, 
